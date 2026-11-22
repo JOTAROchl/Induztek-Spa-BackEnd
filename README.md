@@ -18,7 +18,20 @@ servicios. En una etapa posterior, `users-service` podrá consultar este catálo
 
 - JDK 21
 - Maven 3.9+
-- Docker Desktop con Docker Compose
+- MySQL local (Laragon o XAMPP) o Docker Desktop con Docker Compose
+
+## Ejecutar con Laragon o XAMPP
+
+1. Inicia MySQL desde Laragon o XAMPP. La configuración predeterminada usa
+   `localhost:3306`, el usuario `root` y contraseña vacía, igual que el ejemplo.
+2. Desde esta carpeta, inicia el servicio:
+
+```shell
+mvn -pl roles-service spring-boot:run
+```
+
+La base `induztek_roles` se crea automáticamente. Si tu instancia usa otros datos,
+define `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` y `DB_PASSWORD` antes de iniciar Maven.
 
 ## Ejecutar con Docker Compose
 
@@ -50,13 +63,18 @@ docker compose up -d roles-db
 mvn -pl roles-service spring-boot:run
 ```
 
-La configuración local usa MySQL en `localhost:3307`. Se puede ajustar mediante las
-variables `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` y `DB_PASSWORD`.
+La configuración local usa MySQL en `localhost:3306`. El contenedor MySQL de Docker se
+expone en `localhost:3307`; Compose configura el puerto interno y las credenciales del
+servicio automáticamente.
 
 ## API
 
 Los errores siguen el formato JSON:
 `{"status": ..., "error": ..., "message": ..., "path": ..., "timestamp": ...}`.
+
+La documentación interactiva OpenAPI/Swagger está disponible en
+`http://localhost:8081/swagger-ui.html`; el documento JSON se publica en
+`http://localhost:8081/api-docs`.
 
 | Método | Ruta | Resultado |
 |---|---|---|
