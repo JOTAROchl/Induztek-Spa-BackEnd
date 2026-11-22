@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -35,6 +36,13 @@ public class ApiExceptionHandler {
                                                       HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(error(HttpStatus.CONFLICT, "El registro entra en conflicto con un dato existente", request));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> manejarJsonInvalido(HttpMessageNotReadableException exception,
+                                                          HttpServletRequest request) {
+        return ResponseEntity.badRequest()
+                .body(error(HttpStatus.BAD_REQUEST, "El cuerpo JSON no tiene un formato válido", request));
     }
 
     private ApiError error(HttpStatus status, String message, HttpServletRequest request) {

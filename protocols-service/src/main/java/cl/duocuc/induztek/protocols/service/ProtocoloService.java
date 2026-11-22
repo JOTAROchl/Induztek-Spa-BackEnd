@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -46,10 +47,14 @@ public class ProtocoloService {
     public ProtocoloResponse crear(ProtocoloRequest request) {
         validarEstado(request.estado());
         String correo = validarResponsable(request.correoUsuario());
+        BigDecimal temperatura = medicion(request.temperatura(), "temperatura",
+                new BigDecimal("-50"), new BigDecimal("150"));
+        BigDecimal humedad = medicion(request.humedad(), "humedad",
+                BigDecimal.ZERO, new BigDecimal("100"));
         usuarioClient.obtenerActivo(correo);
         Protocolo protocolo = new Protocolo(request.equipo().trim(), request.fecha(),
                 request.estado().trim(), limpiar(request.observaciones()), correo,
-                request.temperatura(), request.humedad());
+                temperatura, humedad);
         return ProtocoloResponse.from(repository.save(protocolo));
     }
 
@@ -59,14 +64,18 @@ public class ProtocoloService {
         if (!correo.equals(validarResponsable(request.correoUsuario()))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede transferir un protocolo a otro responsable");
         }
+        BigDecimal temperatura = medicion(request.temperatura(), "temperatura",
+                new BigDecimal("-50"), new BigDecimal("150"));
+        BigDecimal humedad = medicion(request.humedad(), "humedad",
+                BigDecimal.ZERO, new BigDecimal("100"));
         usuarioClient.obtenerActivo(correo);
         Protocolo protocolo = buscarPropio(id, correo);
         protocolo.setEquipo(request.equipo().trim());
         protocolo.setFecha(request.fecha());
         protocolo.setEstado(request.estado().trim());
         protocolo.setObservaciones(limpiar(request.observaciones()));
-        protocolo.setTemperatura(request.temperatura());
-        protocolo.setHumedad(request.humedad());
+        protocolo.setTemperatura(temperatura);
+        protocolo.setHumedad(humedad);
         return ProtocoloResponse.from(repository.save(protocolo));
     }
 
@@ -88,6 +97,23 @@ public class ProtocoloService {
         if (!ESTADOS.contains(estado.trim())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El estado del protocolo no es válido");
         }
+    }
+
+    private BigDecimal medicion(String valor, String nombre, BigDecimal minimo, BigDecimal maximo) {
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+        BigDecimal medicion;
+        try {
+            medicion = new BigDecimal(valor.trim());
+        } catch (NumberFormatException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, nombre + " debe ser numérica");
+        }
+        if (medicion.compareTo(minimo) < 0 || medicion.compareTo(maximo) > 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    nombre + " está fuera del rango permitido");
+        }
+        return medicion;
     }
 
     private String limpiar(String texto) {

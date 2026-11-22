@@ -122,23 +122,24 @@ Las contraseñas se guardan con BCrypt y nunca aparecen en las respuestas. Para 
 | PUT | `/api/protocolos/{id}?correoUsuario=...` | Actualizar protocolo propio |
 | DELETE | `/api/protocolos/{id}?correoUsuario=...` | Eliminar protocolo propio |
 
-Ejemplo de creación (fechas ISO-8601):
+Ejemplo de creación compatible con los formatos de la app (fecha `dd/MM/yyyy`;
+temperatura y humedad se reciben como texto numérico y pueden quedar vacías):
 
 ```json
 {
   "equipo": "TR-01",
-  "fecha": "2026-11-22",
+  "fecha": "22/11/2026",
   "estado": "Registrado en terreno",
   "observaciones": "Inspección visual completada",
   "correoUsuario": "ana@induztek.cl",
-  "temperatura": 22.5,
-  "humedad": 45
+  "temperatura": "22.5",
+  "humedad": "45"
 }
 ```
 
 Los estados admitidos son `Borrador`, `Registrado en terreno`, `Observado`,
-`Formalizado` y `Anulado`. Temperatura y humedad son opcionales; humedad debe estar
-entre 0 y 100.
+`Formalizado` y `Anulado`. Temperatura y humedad son opcionales; temperatura debe estar
+entre -50 y 150, y humedad entre 0 y 100.
 
 ## Límites de seguridad
 

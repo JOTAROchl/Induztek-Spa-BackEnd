@@ -1,5 +1,6 @@
 package cl.duocuc.induztek.protocols.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import cl.duocuc.induztek.protocols.model.Protocolo;
 
 import java.math.BigDecimal;
@@ -9,7 +10,7 @@ import java.time.LocalDate;
 public record ProtocoloResponse(
         Long id,
         String equipo,
-        LocalDate fecha,
+        @JsonFormat(pattern = "dd/MM/yyyy") LocalDate fecha,
         String estado,
         String observaciones,
         String correoUsuario,
