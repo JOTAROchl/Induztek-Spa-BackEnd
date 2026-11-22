@@ -1,0 +1,110 @@
+services:
+  roles-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: induztek_roles
+      MYSQL_USER: roles_app
+      MYSQL_PASSWORD: ${ROLES_DB_PASSWORD:?Set ROLES_DB_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${ROLES_DB_ROOT_PASSWORD:?Set ROLES_DB_ROOT_PASSWORD in .env}
+    ports:
+      - "3307:3306"
+    volumes:
+      - roles-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${ROLES_DB_ROOT_PASSWORD:?Set ROLES_DB_ROOT_PASSWORD in .env}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  users-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: induztek_users
+      MYSQL_USER: users_app
+      MYSQL_PASSWORD: ${USERS_DB_PASSWORD:?Set USERS_DB_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${USERS_DB_ROOT_PASSWORD:?Set USERS_DB_ROOT_PASSWORD in .env}
+    ports:
+      - "3308:3306"
+    volumes:
+      - users-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${USERS_DB_ROOT_PASSWORD:?Set USERS_DB_ROOT_PASSWORD in .env}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  protocols-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: induztek_protocols
+      MYSQL_USER: protocols_app
+      MYSQL_PASSWORD: ${PROTOCOLS_DB_PASSWORD:?Set PROTOCOLS_DB_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${PROTOCOLS_DB_ROOT_PASSWORD:?Set PROTOCOLS_DB_ROOT_PASSWORD in .env}
+    ports:
+      - "3309:3306"
+    volumes:
+      - protocols-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${PROTOCOLS_DB_ROOT_PASSWORD:?Set PROTOCOLS_DB_ROOT_PASSWORD in .env}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  roles-service:
+    build:
+      context: .
+      dockerfile: roles-service/Dockerfile
+    environment:
+      DB_HOST: roles-db
+      DB_PORT: 3306
+      DB_NAME: induztek_roles
+      DB_USER: roles_app
+      DB_PASSWORD: ${ROLES_DB_PASSWORD:?Set ROLES_DB_PASSWORD in .env}
+    ports:
+      - "8081:8081"
+    depends_on:
+      roles-db:
+        condition: service_healthy
+
+  users-service:
+    build:
+      context: .
+      dockerfile: users-service/Dockerfile
+    environment:
+      DB_HOST: users-db
+      DB_PORT: 3306
+      DB_NAME: induztek_users
+      DB_USER: users_app
+      DB_PASSWORD: ${USERS_DB_PASSWORD:?Set USERS_DB_PASSWORD in .env}
+      ROLES_SERVICE_URL: http://roles-service:8081
+    ports:
+      - "8082:8082"
+    depends_on:
+      users-db:
+        condition: service_healthy
+      roles-service:
+        condition: service_started
+
+  protocols-service:
+    build:
+      context: .
+      dockerfile: protocols-service/Dockerfile
+    environment:
+      DB_HOST: protocols-db
+      DB_PORT: 3306
+      DB_NAME: induztek_protocols
+      DB_USER: protocols_app
+      DB_PASSWORD: ${PROTOCOLS_DB_PASSWORD:?Set PROTOCOLS_DB_PASSWORD in .env}
+      USERS_SERVICE_URL: http://users-service:8082
+    ports:
+      - "8083:8083"
+    depends_on:
+      protocols-db:
+        condition: service_healthy
+      users-service:
+        condition: service_started
+
+volumes:
+  roles-data:
+  users-data:
+  protocols-data:
