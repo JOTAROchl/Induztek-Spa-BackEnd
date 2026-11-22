@@ -16,8 +16,6 @@
 
     <modules>
         <module>roles-service</module>
-        <module>users-service</module>
-        <module>protocols-service</module>
     </modules>
 
     <properties>
