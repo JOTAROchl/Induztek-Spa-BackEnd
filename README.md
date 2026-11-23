@@ -1,8 +1,8 @@
-# Induztek SpA — microservicios (parche 3)
+# Induztek SpA — microservicios (parche 4)
 
-Este parche agrega `users-service` al `roles-service` ya implementado. Sigue la estructura
-Spring Boot + JPA + MySQL del ejemplo `MiRegistro_Microservicios`, pero mantiene base,
-credenciales y propiedad de datos independientes en cada servicio.
+Este parche agrega `protocols-service` a `roles-service` y `users-service`. Sigue la
+estructura Spring Boot + JPA + MySQL del ejemplo `MiRegistro_Microservicios`, manteniendo
+base de datos, credenciales y propiedad de datos independientes en cada servicio.
 
 ## Arquitectura actual
 
@@ -10,11 +10,14 @@ credenciales y propiedad de datos independientes en cada servicio.
 |---|---:|---|---|
 | `roles-service` | 8081 | `induztek_roles` | Catálogo de roles |
 | `users-service` | 8082 | `induztek_users` | Registro, acceso y gestión de usuarios |
+| `protocols-service` | 8083 | `induztek_protocolos` | Protocolos e inspecciones técnicas |
 
 Cada servicio accede exclusivamente a su propia base de datos. `users-service` guarda
 solo `rol_id` y consulta el nombre/validez del rol mediante HTTP con `WebClient`; nunca lee
-las tablas de `roles-service`. `protocols-service`, API Gateway y Eureka aún no forman
-parte de esta etapa.
+las tablas de `roles-service`. `protocols-service` almacena el correo del responsable como
+dato propio y consulta a `users-service` mediante `WebClient` al crear un protocolo, para
+confirmar que la cuenta existe y está aprobada; no lee tablas ajenas. API Gateway y Eureka
+aún no forman parte de esta etapa.
 
 ## Requisitos
 
@@ -33,7 +36,7 @@ parte de esta etapa.
 mvn -pl roles-service spring-boot:run
 ```
 
-```shell
+```powershell
 $env:DB_NAME="induztek_users"
 $env:DB_PORT="3306"
 $env:DB_USER="root"
@@ -42,9 +45,18 @@ $env:ROLES_SERVICE_URL="http://localhost:8081"
 mvn -pl users-service spring-boot:run
 ```
 
+```powershell
+$env:DB_NAME="induztek_protocolos"
+$env:DB_PORT="3306"
+$env:DB_USER="root"
+$env:DB_PASSWORD=""
+$env:USERS_SERVICE_URL="http://localhost:8082"
+mvn -pl protocols-service spring-boot:run
+```
+
 La base de cada servicio se crea automáticamente. En ejecución local, configura
 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` según tu instalación; en Docker
-Compose, los puertos MySQL del host son 3307 (roles) y 3308 (usuarios).
+Compose, los puertos MySQL del host son 3307 (roles), 3308 (usuarios) y 3309 (protocolos).
 
 ## Ejecutar con Docker Compose
 
@@ -60,7 +72,8 @@ Reemplaza los valores de `.env` por contraseñas locales y luego ejecuta:
 docker compose up --build
 ```
 
-Las APIs quedan disponibles en `http://localhost:8081` y `http://localhost:8082`.
+Las APIs quedan disponibles en `http://localhost:8081`, `http://localhost:8082` y
+`http://localhost:8083`.
 Para detenerlas:
 
 ```shell
@@ -129,17 +142,49 @@ Login responde el estado de aprobación en `aprobado`; la app debe permitir cont
 solo si ese valor es `true`. Las contraseñas se guardan con BCrypt y nunca aparecen en
 respuestas.
 
-La cobertura de ambos servicios se verifica con JaCoCo: `mvn verify` falla si la cobertura
-de líneas de alguno queda bajo el 80 %. Los informes se generan en
-`roles-service/target/site/jacoco/index.html` y `users-service/target/site/jacoco/index.html`.
+La cobertura de los tres servicios se verifica con JaCoCo: `mvn verify` falla si la
+cobertura de líneas de alguno queda bajo el 80 %. Los informes se generan en
+`roles-service/target/site/jacoco/index.html`, `users-service/target/site/jacoco/index.html`
+y `protocols-service/target/site/jacoco/index.html`.
+
+### protocols-service — `http://localhost:8083`
+
+Swagger UI: `/swagger-ui.html`; OpenAPI JSON: `/api-docs`.
+
+| Método | Ruta | Resultado |
+|---|---|---|
+| GET | `/api/protocolos?correoUsuario=ana@induztek.cl` | Protocolos del correo indicado, más recientes primero |
+| GET | `/api/protocolos/{id}?correoUsuario=ana@induztek.cl` | Protocolo del usuario indicado o 404 |
+| POST | `/api/protocolos` | Crear protocolo para una cuenta aprobada, 201 |
+| PUT | `/api/protocolos/{id}?correoUsuario=ana@induztek.cl` | Actualizar protocolo propio |
+| DELETE | `/api/protocolos/{id}?correoUsuario=ana@induztek.cl` | Eliminar protocolo propio, 204 |
+
+El cuerpo conserva los nombres de campos de la app (`equipo`, `fecha`, `estado`,
+`observaciones`, `correoUsuario`, `temperatura`, `humedad`). La fecha debe tener formato
+`dd/MM/yyyy`; los estados permitidos son `Borrador`, `Registrado en terreno`, `Observado`,
+`Formalizado` y `Anulado`. El correo se valida contra `users-service` al crear el protocolo
+y no puede cambiarse al editarlo.
+
+```json
+{
+  "equipo": "TR-01",
+  "fecha": "23/11/2026",
+  "estado": "Registrado en terreno",
+  "observaciones": "Inspección preventiva",
+  "correoUsuario": "ana@induztek.cl",
+  "temperatura": "22.5",
+  "humedad": "45"
+}
+```
 
 ## Integración móvil y seguridad pendiente
 
-En un emulador Android, configura Retrofit con `http://10.0.2.2:8082/`; desde un teléfono
-en la misma Wi-Fi, usa la IP local del computador. Como la app y el servicio son HTTP,
-Android debe permitir tráfico sin cifrar para desarrollo.
+En un emulador Android, configura Retrofit con `http://10.0.2.2:8082/` para usuarios y
+`http://10.0.2.2:8083/` para protocolos; desde un teléfono en la misma Wi-Fi, usa la IP
+local del computador. Como la app y el servicio son HTTP, Android debe permitir tráfico
+sin cifrar para desarrollo.
 
-Los endpoints de gestión de usuarios, cambio de rol y aprobación todavía no tienen
-autenticación ni autorización; no expongas el servicio a Internet hasta incorporar
-tokens y control de acceso. La exposición pública y Retrofit se integrarán en una etapa
-posterior.
+Los endpoints todavía no tienen autenticación ni autorización. El parámetro
+`correoUsuario` delimita consultas, pero no verifica la identidad del solicitante. No
+expongas los servicios a Internet hasta incorporar tokens y control de acceso. La
+integración Retrofit completa, API Gateway y Eureka se abordarán en una etapa posterior.

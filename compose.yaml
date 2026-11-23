@@ -68,6 +68,43 @@ services:
       roles-service:
         condition: service_started
 
+  protocols-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: induztek_protocolos
+      MYSQL_USER: protocols_app
+      MYSQL_PASSWORD: ${PROTOCOLS_DB_PASSWORD:?Set PROTOCOLS_DB_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${PROTOCOLS_DB_ROOT_PASSWORD:?Set PROTOCOLS_DB_ROOT_PASSWORD in .env}
+    ports:
+      - "3309:3306"
+    volumes:
+      - protocols-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${PROTOCOLS_DB_ROOT_PASSWORD:?Set PROTOCOLS_DB_ROOT_PASSWORD in .env}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  protocols-service:
+    build:
+      context: .
+      dockerfile: protocols-service/Dockerfile
+    environment:
+      DB_HOST: protocols-db
+      DB_PORT: 3306
+      DB_NAME: induztek_protocolos
+      DB_USER: protocols_app
+      DB_PASSWORD: ${PROTOCOLS_DB_PASSWORD:?Set PROTOCOLS_DB_PASSWORD in .env}
+      USERS_SERVICE_URL: http://users-service:8082
+    ports:
+      - "8083:8083"
+    depends_on:
+      protocols-db:
+        condition: service_healthy
+      users-service:
+        condition: service_started
+
 volumes:
   roles-data:
   users-data:
+  protocols-data:
