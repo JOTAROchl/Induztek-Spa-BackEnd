@@ -32,5 +32,42 @@ services:
       roles-db:
         condition: service_healthy
 
+  users-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: induztek_users
+      MYSQL_USER: users_app
+      MYSQL_PASSWORD: ${USERS_DB_PASSWORD:?Set USERS_DB_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${USERS_DB_ROOT_PASSWORD:?Set USERS_DB_ROOT_PASSWORD in .env}
+    ports:
+      - "3308:3306"
+    volumes:
+      - users-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${USERS_DB_ROOT_PASSWORD:?Set USERS_DB_ROOT_PASSWORD in .env}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  users-service:
+    build:
+      context: .
+      dockerfile: users-service/Dockerfile
+    environment:
+      DB_HOST: users-db
+      DB_PORT: 3306
+      DB_NAME: induztek_users
+      DB_USER: users_app
+      DB_PASSWORD: ${USERS_DB_PASSWORD:?Set USERS_DB_PASSWORD in .env}
+      ROLES_SERVICE_URL: http://roles-service:8081
+    ports:
+      - "8082:8082"
+    depends_on:
+      users-db:
+        condition: service_healthy
+      roles-service:
+        condition: service_started
+
 volumes:
   roles-data:
+  users-data:

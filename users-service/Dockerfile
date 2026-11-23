@@ -1,0 +1,15 @@
+FROM maven:3.9.9-eclipse-temurin-21 AS build
+WORKDIR /workspace
+COPY pom.xml .
+COPY roles-service/pom.xml roles-service/pom.xml
+COPY users-service/pom.xml users-service/pom.xml
+RUN mvn -B -pl users-service -am dependency:go-offline
+COPY roles-service/src roles-service/src
+COPY users-service/src users-service/src
+RUN mvn -B -pl users-service -am package -DskipTests
+
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY --from=build /workspace/users-service/target/users-service-1.0.0.jar app.jar
+EXPOSE 8082
+ENTRYPOINT ["java", "-jar", "app.jar"]
