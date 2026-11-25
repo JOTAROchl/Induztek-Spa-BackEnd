@@ -2,10 +2,20 @@ package cl.duocuc.induztekspa.repository
 
 import android.content.Context
 import cl.duocuc.induztekspa.data.UsuarioDbHelper
+import cl.duocuc.induztekspa.data.remote.RetrofitClient
 import cl.duocuc.induztekspa.model.Usuario
 
 class UsuarioRepository(context: Context) {
     private val dbHelper = UsuarioDbHelper(context)
+
+    suspend fun registrarUsuarioRemote(usuario: Usuario): Boolean {
+        return try {
+            val resp = RetrofitClient.usuarioApi.registrarUsuario(usuario)
+            resp.isSuccessful
+        } catch (_: Exception) {
+            false
+        }
+    }
 
     fun registrarUsuario(usuario: Usuario): Long {
         return dbHelper.insertarUsuario(usuario)
@@ -21,6 +31,14 @@ class UsuarioRepository(context: Context) {
 
     fun recuperarContrasena(correo: String, nuevaContrasena: String): Boolean {
         return dbHelper.recuperarContrasena(correo, nuevaContrasena)
+    }
+
+    suspend fun obtenerUsuariosRemote(): List<Usuario> {
+        return try {
+            RetrofitClient.usuarioApi.obtenerUsuarios()
+        } catch (_: Exception) {
+            dbHelper.obtenerUsuarios()
+        }
     }
 
     fun obtenerUsuarios(): List<Usuario> {
