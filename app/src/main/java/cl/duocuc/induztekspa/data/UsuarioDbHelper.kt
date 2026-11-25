@@ -9,7 +9,7 @@ import cl.duocuc.induztekspa.model.Usuario
 class UsuarioDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
-        private const val DATABASE_VERSION = 2
+        private const val DATABASE_VERSION = 4
         private const val DATABASE_NAME = "Induztek.db"
 
         const val TABLE_USUARIOS = "usuarios"
@@ -18,6 +18,10 @@ class UsuarioDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
         const val COLUMN_CORREO = "correo"
         const val COLUMN_CONTRASENA = "contrasena"
         const val COLUMN_ROL = "rol"
+        const val COLUMN_RUT = "rut"
+        const val COLUMN_TELEFONO = "telefono"
+        const val COLUMN_CARGO = "cargo"
+        const val COLUMN_ESTA_APROBADO = "esta_aprobado"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -26,7 +30,11 @@ class UsuarioDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
                 + "$COLUMN_NOMBRE TEXT,"
                 + "$COLUMN_CORREO TEXT,"
                 + "$COLUMN_CONTRASENA TEXT,"
-                + "$COLUMN_ROL TEXT)")
+                + "$COLUMN_ROL TEXT,"
+                + "$COLUMN_RUT TEXT,"
+                + "$COLUMN_TELEFONO TEXT,"
+                + "$COLUMN_CARGO TEXT,"
+                + "$COLUMN_ESTA_APROBADO INTEGER)")
         db.execSQL(createTable)
 
         val adminValues = ContentValues().apply {
@@ -34,6 +42,10 @@ class UsuarioDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
             put(COLUMN_CORREO, "admin@induztek.cl")
             put(COLUMN_CONTRASENA, "Admin123!")
             put(COLUMN_ROL, "Jefe técnico")
+            put(COLUMN_RUT, "13.871.905-7")
+            put(COLUMN_TELEFONO, "+56 9 9876 5432")
+            put(COLUMN_CARGO, "Jefe Técnico de Terreno")
+            put(COLUMN_ESTA_APROBADO, 1)
         }
         db.insert(TABLE_USUARIOS, null, adminValues)
     }
@@ -50,6 +62,10 @@ class UsuarioDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
             put(COLUMN_CORREO, usuario.correo)
             put(COLUMN_CONTRASENA, usuario.contrasena)
             put(COLUMN_ROL, usuario.rol)
+            put(COLUMN_RUT, usuario.rut)
+            put(COLUMN_TELEFONO, usuario.telefono)
+            put(COLUMN_CARGO, usuario.cargo)
+            put(COLUMN_ESTA_APROBADO, if (usuario.estaAprobado) 1 else 0)
         }
         val id = db.insert(TABLE_USUARIOS, null, values)
         db.close()
@@ -67,34 +83,46 @@ class UsuarioDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
         )
         var usuario: Usuario? = null
         if (cursor.moveToFirst()) {
-            usuario = Usuario(
-                id = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ID)),
-                nombre = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NOMBRE)),
-                correo = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CORREO)),
-                contrasena = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CONTRASENA)),
-                rol = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_ROL))
-            )
+            usuario = mapearUsuario(cursor)
         }
         cursor.close()
         db.close()
         return usuario
     }
 
+    fun buscarPorCorreo(correo: String): Usuario? {
+        val db = this.readableDatabase
+        val cursor = db.query(
+            TABLE_USUARIOS,
+            null,
+            "$COLUMN_CORREO = ?",
+            arrayOf(correo),
+            null, null, null
+        )
+        var usuario: Usuario? = null
+        if (cursor.moveToFirst()) {
+            usuario = mapearUsuario(cursor)
+        }
+        cursor.close()
+        db.close()
+        return usuario
+    }
+
+    fun recuperarContrasena(correo: String, nuevaContrasena: String): Boolean {
+        val db = this.writableDatabase
+        val values = ContentValues().apply { put(COLUMN_CONTRASENA, nuevaContrasena) }
+        val filas = db.update(TABLE_USUARIOS, values, "$COLUMN_CORREO = ?", arrayOf(correo))
+        db.close()
+        return filas > 0
+    }
+
     fun obtenerUsuarios(): List<Usuario> {
         val lista = mutableListOf<Usuario>()
         val db = this.readableDatabase
-        val cursor = db.rawQuery("SELECT * FROM $TABLE_USUARIOS ORDER BY $COLUMN_ROL ASC", null)
+        val cursor = db.rawQuery("SELECT * FROM $TABLE_USUARIOS ORDER BY $COLUMN_ESTA_APROBADO ASC, $COLUMN_ROL ASC", null)
         if (cursor.moveToFirst()) {
             do {
-                lista.add(
-                    Usuario(
-                        id = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ID)),
-                        nombre = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NOMBRE)),
-                        correo = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CORREO)),
-                        contrasena = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CONTRASENA)),
-                        rol = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_ROL))
-                    )
-                )
+                lista.add(mapearUsuario(cursor))
             } while (cursor.moveToNext())
         }
         cursor.close()
@@ -106,6 +134,27 @@ class UsuarioDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
         val db = this.writableDatabase
         val values = ContentValues().apply { put(COLUMN_ROL, nuevoRol) }
         val filasAfectadas = db.update(TABLE_USUARIOS, values, "$COLUMN_ID = ?", arrayOf(id.toString()))
+        db.close()
+        return filasAfectadas > 0
+    }
+
+    fun aprobarUsuario(id: Int): Boolean {
+        val db = this.writableDatabase
+        val values = ContentValues().apply { put(COLUMN_ESTA_APROBADO, 1) }
+        val filasAfectadas = db.update(TABLE_USUARIOS, values, "$COLUMN_ID = ?", arrayOf(id.toString()))
+        db.close()
+        return filasAfectadas > 0
+    }
+
+    fun actualizarPerfilExtendido(correoAntiguo: String, nuevoCorreo: String, rut: String, telefono: String, cargo: String): Boolean {
+        val db = this.writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_CORREO, nuevoCorreo)
+            put(COLUMN_RUT, rut)
+            put(COLUMN_TELEFONO, telefono)
+            put(COLUMN_CARGO, cargo)
+        }
+        val filasAfectadas = db.update(TABLE_USUARIOS, values, "$COLUMN_CORREO = ?", arrayOf(correoAntiguo))
         db.close()
         return filasAfectadas > 0
     }
@@ -123,5 +172,29 @@ class UsuarioDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAM
         val filasAfectadas = db.delete(TABLE_USUARIOS, "$COLUMN_ID = ?", arrayOf(id.toString()))
         db.close()
         return filasAfectadas > 0
+    }
+
+    private fun mapearUsuario(cursor: android.database.Cursor): Usuario {
+        val idIdx = cursor.getColumnIndexOrThrow(COLUMN_ID)
+        val nomIdx = cursor.getColumnIndexOrThrow(COLUMN_NOMBRE)
+        val corIdx = cursor.getColumnIndexOrThrow(COLUMN_CORREO)
+        val pasIdx = cursor.getColumnIndexOrThrow(COLUMN_CONTRASENA)
+        val rolIdx = cursor.getColumnIndexOrThrow(COLUMN_ROL)
+        val rutIdx = cursor.getColumnIndex(COLUMN_RUT)
+        val telIdx = cursor.getColumnIndex(COLUMN_TELEFONO)
+        val carIdx = cursor.getColumnIndex(COLUMN_CARGO)
+        val aprIdx = cursor.getColumnIndex(COLUMN_ESTA_APROBADO)
+
+        return Usuario(
+            id = cursor.getInt(idIdx),
+            nombre = cursor.getString(nomIdx),
+            correo = cursor.getString(corIdx),
+            contrasena = cursor.getString(pasIdx),
+            rol = cursor.getString(rolIdx),
+            rut = if (rutIdx != -1) cursor.getString(rutIdx) ?: "" else "",
+            telefono = if (telIdx != -1) cursor.getString(telIdx) ?: "" else "",
+            cargo = if (carIdx != -1) cursor.getString(carIdx) ?: "" else "",
+            estaAprobado = if (aprIdx != -1) cursor.getInt(aprIdx) == 1 else true
+        )
     }
 }

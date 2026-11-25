@@ -48,7 +48,7 @@ enum class PantallaHome {
 fun HomeScreen(onLogout: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val sharedPref = remember { context.getSharedPreferences("perfil_prefs", android.content.Context.MODE_PRIVATE) }
-    val rolUsuarioActual = sharedPref.getString("rol", "Operador") ?: "Operador"
+    val rolUsuarioActual = sharedPref.getString("rol", "Técnico") ?: "Técnico"
     val nombreUsuarioActual = sharedPref.getString("nombre", "") ?: ""
     val correoUsuarioActual = sharedPref.getString("correo", "") ?: ""
     
@@ -80,7 +80,7 @@ fun HomeScreen(onLogout: () -> Unit) {
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.AutoMirrored.Filled.ListAlt, contentDescription = null) },
-                    label = { Text(text = if (rolUsuarioActual == "Jefe técnico") "Gestión de Protocolos" else "Mis Protocolos") },
+                    label = { Text(text = if (rolUsuarioActual == "Jefe técnico" || rolUsuarioActual == "Ingeniero") "Gestión de Protocolos" else "Mis Protocolos") },
                     selected = pantallaActual == PantallaHome.LISTA_PROTOCOLOS,
                     onClick = {
                         pantallaActual = PantallaHome.LISTA_PROTOCOLOS
@@ -143,8 +143,8 @@ fun HomeScreen(onLogout: () -> Unit) {
                         Text(
                             text = when(pantallaActual) {
                                 PantallaHome.INICIO -> "Inicio"
-                                PantallaHome.LISTA_PROTOCOLOS -> if (rolUsuarioActual == "Jefe técnico") "Gestión de Protocolos" else "Mis Protocolos"
-                                PantallaHome.FORMULARIO_PROTOCOLO -> if(protocoloAEditar == null) "Registro de Inspección" else "Editando Inspección"
+                                PantallaHome.LISTA_PROTOCOLOS -> if (rolUsuarioActual == "Jefe técnico" || rolUsuarioActual == "Ingeniero") "Gestión de Protocolos" else "Mis Protocolos"
+                                PantallaHome.FORMULARIO_PROTOCOLO -> if(protocoloAEditar == null) "Nuevo Protocolo" else "Editando Inspección"
                                 PantallaHome.MI_PERFIL -> "Mi Perfil"
                                 PantallaHome.GESTION_USUARIOS -> "Gestión de Usuarios"
                             }
@@ -197,6 +197,7 @@ fun HomeScreen(onLogout: () -> Unit) {
                     PantallaHome.FORMULARIO_PROTOCOLO -> {
                         ProtocoloFormScreen(
                             correoUsuario = correoUsuarioActual,
+                            rolUsuario = rolUsuarioActual,
                             protocoloAEditar = protocoloAEditar,
                             onGuardadoExitoso = {
                                 pantallaActual = PantallaHome.LISTA_PROTOCOLOS

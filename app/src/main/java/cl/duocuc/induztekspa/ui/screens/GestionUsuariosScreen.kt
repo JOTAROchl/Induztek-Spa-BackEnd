@@ -1,6 +1,7 @@
 package cl.duocuc.induztekspa.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,10 +10,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,8 +38,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duocuc.induztekspa.model.Usuario
 import cl.duocuc.induztekspa.ui.styles.EstilosTarjeta
@@ -62,7 +71,7 @@ fun GestionUsuariosScreen(
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = "Panel exclusivo para Administradores",
+            text = "Aprobación de cuentas y asignación de roles",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -73,6 +82,7 @@ fun GestionUsuariosScreen(
             items(usuarios) { usuario ->
                 UsuarioCard(
                     usuario = usuario,
+                    onAprobar = { viewModel.aprobarUsuario(usuario.id) },
                     onEliminar = { viewModel.eliminarUsuario(usuario.id) },
                     onCambiarRol = { id, rol -> viewModel.actualizarRol(id, rol) }
                 )
@@ -85,6 +95,7 @@ fun GestionUsuariosScreen(
 @Composable
 fun UsuarioCard(
     usuario: Usuario,
+    onAprobar: () -> Unit,
     onEliminar: () -> Unit,
     onCambiarRol: (Int, String) -> Unit
 ) {
@@ -114,6 +125,13 @@ fun UsuarioCard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (usuario.rut.isNotBlank()) {
+                        Text(
+                            text = "RUT: ${usuario.rut}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 
                 if (usuario.correo != "admin@induztek.cl") {
@@ -130,6 +148,42 @@ fun UsuarioCard(
                 }
             }
             
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Badge de Estado de Aprobación
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (usuario.estaAprobado) {
+                    Text(
+                        text = "✓ Cuenta Aprobada",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF2E7D32),
+                        fontWeight = FontWeight.Bold
+                    )
+                } else {
+                    Text(
+                        text = "⏳ PENDIENTE DE APROBACIÓN",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFC62828),
+                        fontWeight = FontWeight.Bold
+                    )
+                    Button(
+                        onClick = {
+                            onAprobar()
+                            Toast.makeText(context, "Cuenta aprobada exitosamente", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+                        Text("Aprobar")
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(Dimens.paddingSmall))
 
             if (usuario.correo != "admin@induztek.cl") {

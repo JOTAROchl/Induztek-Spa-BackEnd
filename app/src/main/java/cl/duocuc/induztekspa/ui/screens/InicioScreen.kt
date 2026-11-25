@@ -56,7 +56,7 @@ fun InicioScreen(
         Spacer(modifier = Modifier.height(Dimens.paddingMedium))
         
         BotonPrincipal(
-            text = "Registrar Inspección",
+            text = "Nuevo Protocolo",
             icono = Icons.Default.AddCircle,
             onClick = { onNavigate(PantallaHome.FORMULARIO_PROTOCOLO) }
         )

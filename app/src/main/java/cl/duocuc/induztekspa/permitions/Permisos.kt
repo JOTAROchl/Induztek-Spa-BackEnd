@@ -34,6 +34,22 @@ object Permisos {
         }
     }
 
+    @Composable
+    fun rememberLocationPermissionLauncher(
+        onGranted: () -> Unit,
+        onDenied: () -> Unit
+    ): ManagedActivityResultLauncher<String, Boolean> {
+        return rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (isGranted) {
+                onGranted()
+            } else {
+                onDenied()
+            }
+        }
+    }
+
     fun solicitarPermisoCamara(
         context: Context,
         launcher: ManagedActivityResultLauncher<String, Boolean>,
@@ -43,6 +59,18 @@ object Permisos {
             onGranted()
         } else {
             launcher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    fun solicitarPermisoUbicacion(
+        context: Context,
+        launcher: ManagedActivityResultLauncher<String, Boolean>,
+        onGranted: () -> Unit
+    ) {
+        if (checkPermiso(context, Manifest.permission.ACCESS_FINE_LOCATION)) {
+            onGranted()
+        } else {
+            launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 }

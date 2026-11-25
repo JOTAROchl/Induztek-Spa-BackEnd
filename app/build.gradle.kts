@@ -56,6 +56,18 @@ dependencies {
 
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1")
 
     implementation("androidx.navigation:navigation-compose:2.10.2")
+
+    // Retrofit (Cliente HTTP para API REST y Convertidor Gson para JSON)
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+
+    // Coil (Carga y renderizado de imágenes desde URL)
+    implementation("io.coil-kt.coil3:coil-compose:3.0.0")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.0")
+
+    // Mapas Nativos de Código Abierto (osmdroid) - Usados en Sismo Detector
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
 }

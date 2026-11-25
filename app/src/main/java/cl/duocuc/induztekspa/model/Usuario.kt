@@ -5,5 +5,9 @@ data class Usuario(
     val nombre: String,
     val correo: String,
     val contrasena: String,
-    val rol: String = "Técnico" // Cambiado al rol base según el documento
+    val rol: String = "Técnico",
+    val rut: String = "",
+    val telefono: String = "",
+    val cargo: String = "Técnico de Terreno",
+    val estaAprobado: Boolean = false
 )

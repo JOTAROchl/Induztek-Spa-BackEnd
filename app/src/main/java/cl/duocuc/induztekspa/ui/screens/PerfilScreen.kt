@@ -1,25 +1,57 @@
 package cl.duocuc.induztekspa.ui.screens
 
-import android.Manifest
-import android.content.pm.PackageManager
+import android.content.Context
+import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Work
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,7 +62,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duocuc.induztekspa.permitions.Permisos
 import cl.duocuc.induztekspa.ui.components.AvatarCircular
@@ -55,6 +86,9 @@ fun PerfilScreen(
     var correoOriginal by remember { mutableStateOf(viewModel.obtenerDato("correo", "")) }
     
     var correoEditable by remember { mutableStateOf(correoOriginal) }
+    var rut by remember { mutableStateOf(viewModel.obtenerDato("rut", "12.345.678-9")) }
+    var telefono by remember { mutableStateOf(viewModel.obtenerDato("telefono", "+56 9 1234 5678")) }
+    var cargo by remember { mutableStateOf(viewModel.obtenerDato("cargo", "Técnico de Terreno")) }
     var descripcion by remember { mutableStateOf(viewModel.obtenerDato("desc", "Ingeniero de terreno en Induztek SpA.")) }
     var avatarBase64 by remember { mutableStateOf(viewModel.obtenerDato("avatar", "")) }
     var bannerBase64 by remember { mutableStateOf(viewModel.obtenerDato("banner", "")) }
@@ -82,14 +116,14 @@ fun PerfilScreen(
 
     val launcherGaleria = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
-            val bitmap = android.provider.MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+            val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
             avatarBase64 = ConvertidorImagen.bitmapABase64(bitmap)
         }
     }
 
     val launcherBanner = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
-            val bitmap = android.provider.MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+            val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
             bannerBase64 = ConvertidorImagen.bitmapABase64(bitmap)
         }
     }
@@ -140,7 +174,7 @@ fun PerfilScreen(
                 if (bannerBitmap != null) {
                     Image(
                         bitmap = bannerBitmap.asImageBitmap(),
-                        contentDescription = "Banner",
+                        contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
@@ -151,7 +185,7 @@ fun PerfilScreen(
                         onClick = { launcherBanner.launch("image/*") },
                         modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
                     ) {
-                        Icon(Icons.Default.Image, contentDescription = "Cambiar Banner", tint = Color.White)
+                        Icon(Icons.Default.Image, contentDescription = null, tint = Color.White)
                     }
                 }
             }
@@ -173,7 +207,7 @@ fun PerfilScreen(
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = rol,
+            text = "$cargo ($rol)",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -189,6 +223,9 @@ fun PerfilScreen(
             ) {
                 Column(modifier = Modifier.padding(Dimens.paddingLarge)) {
                     InfoRow(icono = Icons.Default.Email, titulo = "Correo", valor = correoOriginal)
+                    InfoRow(icono = Icons.Default.Badge, titulo = "RUT", valor = rut.ifBlank { "No especificado" })
+                    InfoRow(icono = Icons.Default.Phone, titulo = "Teléfono", valor = telefono.ifBlank { "No especificado" })
+                    InfoRow(icono = Icons.Default.Work, titulo = "Cargo", valor = cargo)
                     InfoRow(icono = Icons.Default.Person, titulo = "Género", valor = genero)
                     InfoRow(icono = Icons.Default.DateRange, titulo = "Fecha de Nac.", valor = if (fechaNacimiento.isBlank()) "No especificada" else fechaNacimiento)
                     Spacer(modifier = Modifier.height(8.dp))
@@ -215,13 +252,13 @@ fun PerfilScreen(
                         onGranted = { launcherCamara.launch(null) }
                     )
                 }) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = "Cámara")
+                    Icon(Icons.Default.CameraAlt, contentDescription = null)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Cámara")
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 OutlinedButton(onClick = { launcherGaleria.launch("image/*") }) {
-                    Icon(Icons.Default.PhotoLibrary, contentDescription = "Galería")
+                    Icon(Icons.Default.PhotoLibrary, contentDescription = null)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Galería")
                 }
@@ -238,6 +275,33 @@ fun PerfilScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
                 
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = rut,
+                    onValueChange = { rut = it },
+                    label = { Text("RUT") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = telefono,
+                    onValueChange = { telefono = it },
+                    label = { Text("Teléfono") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = cargo,
+                    onValueChange = { cargo = it },
+                    label = { Text("Cargo en la Empresa") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 ExposedDropdownMenuBox(
@@ -278,7 +342,7 @@ fun PerfilScreen(
                     modifier = Modifier.fillMaxWidth(),
                     trailingIcon = {
                         IconButton(onClick = { mostrarCalendario = true }) {
-                            Icon(Icons.Default.DateRange, contentDescription = "Calendario")
+                            Icon(Icons.Default.DateRange, contentDescription = null)
                         }
                     }
                 )
@@ -302,6 +366,9 @@ fun PerfilScreen(
                     val exito = viewModel.guardarPerfilCompleto(
                         correoOriginal = correoOriginal,
                         correoNuevo = correoEditable,
+                        rut = rut,
+                        telefono = telefono,
+                        cargo = cargo,
                         descripcion = descripcion,
                         genero = genero,
                         fechaNac = fechaNacimiento,
