@@ -10,8 +10,9 @@ class ProtocoloRepository(context: Context) {
     private val dbHelper = ProtocoloDbHelper(context)
 
     suspend fun obtenerProtocolosRemote(correoUsuario: String, rol: String): Result<List<Protocolo>> {
+        val correoLimpio = correoUsuario.ifBlank { "admin@induztek.cl" }
         return try {
-            val resp = RetrofitClient.protocoloApi.obtenerProtocolos(correoUsuario, rol)
+            val resp = RetrofitClient.protocoloApi.obtenerProtocolos(correoLimpio)
             if (resp.isSuccessful && resp.body() != null) {
                 val lista = resp.body()!!.map { dto ->
                     Protocolo(
@@ -20,10 +21,10 @@ class ProtocoloRepository(context: Context) {
                         equipo = dto.equipo,
                         fechaHora = dto.fecha,
                         estado = dto.estado,
-                        observaciones = dto.observaciones,
+                        observaciones = dto.observaciones ?: "",
                         correoUsuario = dto.correoUsuario,
-                        temperatura = dto.temperatura,
-                        humedad = dto.humedad
+                        temperatura = dto.temperatura ?: "",
+                        humedad = dto.humedad ?: ""
                     )
                 }
                 Result.success(lista)
@@ -74,7 +75,7 @@ class ProtocoloRepository(context: Context) {
             humedad = protocolo.humedad
         )
         return try {
-            val resp = RetrofitClient.protocoloApi.actualizarProtocolo(protocolo.id, dto)
+            val resp = RetrofitClient.protocoloApi.actualizarProtocolo(protocolo.id, protocolo.correoUsuario, dto)
             if (resp.isSuccessful) {
                 dbHelper.actualizarProtocolo(protocolo)
                 Result.success(true)
@@ -88,7 +89,7 @@ class ProtocoloRepository(context: Context) {
 
     suspend fun eliminarProtocoloRemote(id: Int): Result<Boolean> {
         return try {
-            val resp = RetrofitClient.protocoloApi.eliminarProtocolo(id)
+            val resp = RetrofitClient.protocoloApi.eliminarProtocolo(id, "admin@induztek.cl")
             if (resp.isSuccessful) {
                 dbHelper.eliminarProtocolo(id)
                 Result.success(true)

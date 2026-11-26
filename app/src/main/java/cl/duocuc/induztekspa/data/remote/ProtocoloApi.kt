@@ -12,16 +12,22 @@ import retrofit2.http.Query
 interface ProtocoloApi {
     @GET("api/protocolos")
     suspend fun obtenerProtocolos(
-        @Query("correo") correo: String? = null,
-        @Query("rol") rol: String? = null
+        @Query("correoUsuario") correoUsuario: String
     ): Response<List<ProtocoloDto>>
 
     @POST("api/protocolos")
     suspend fun crearProtocolo(@Body dto: ProtocoloDto): Response<ProtocoloDto>
 
     @PUT("api/protocolos/{id}")
-    suspend fun actualizarProtocolo(@Path("id") id: Int, @Body dto: ProtocoloDto): Response<ProtocoloDto>
+    suspend fun actualizarProtocolo(
+        @Path("id") id: Int,
+        @Query("correoUsuario") correoUsuario: String,
+        @Body dto: ProtocoloDto
+    ): Response<ProtocoloDto>
 
     @DELETE("api/protocolos/{id}")
-    suspend fun eliminarProtocolo(@Path("id") id: Int): Response<Void>
+    suspend fun eliminarProtocolo(
+        @Path("id") id: Int,
+        @Query("correoUsuario") correoUsuario: String
+    ): Response<Void>
 }
