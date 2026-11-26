@@ -1,6 +1,5 @@
 package cl.duocuc.induztekspa.data.remote
 
-import cl.duocuc.induztekspa.model.Protocolo
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -15,13 +14,13 @@ interface ProtocoloApi {
     suspend fun obtenerProtocolos(
         @Query("correo") correo: String? = null,
         @Query("rol") rol: String? = null
-    ): List<Protocolo>
+    ): Response<List<ProtocoloDto>>
 
     @POST("api/protocolos")
-    suspend fun crearProtocolo(@Body protocolo: Protocolo): Response<Protocolo>
+    suspend fun crearProtocolo(@Body dto: ProtocoloDto): Response<ProtocoloDto>
 
     @PUT("api/protocolos/{id}")
-    suspend fun actualizarProtocolo(@Path("id") id: Int, @Body protocolo: Protocolo): Response<Protocolo>
+    suspend fun actualizarProtocolo(@Path("id") id: Int, @Body dto: ProtocoloDto): Response<ProtocoloDto>
 
     @DELETE("api/protocolos/{id}")
     suspend fun eliminarProtocolo(@Path("id") id: Int): Response<Void>

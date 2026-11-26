@@ -23,7 +23,12 @@ class ProtocolosViewModel(application: Application) : AndroidViewModel(applicati
     val formState: StateFlow<ProtocoloFormUiState> = _formState.asStateFlow()
 
     fun cargarProtocolos(correoUsuario: String, rol: String) {
-        _protocolos.value = repository.obtenerProtocolos(correoUsuario, rol)
+        viewModelScope.launch {
+            val res = repository.obtenerProtocolosRemote(correoUsuario, rol)
+            if (res.isSuccess) {
+                _protocolos.value = res.getOrDefault(emptyList())
+            }
+        }
     }
 
     fun iniciarFormulario(protocolo: Protocolo?) {
@@ -171,17 +176,19 @@ class ProtocolosViewModel(application: Application) : AndroidViewModel(applicati
             )
 
             val esNuevo = protocoloAEditar == null
-            val exito = if (esNuevo) {
-                repository.insertarProtocolo(p) > -1
-            } else {
-                repository.actualizarProtocolo(p)
-            }
+            viewModelScope.launch {
+                val res = if (esNuevo) {
+                    repository.crearProtocoloRemote(p)
+                } else {
+                    repository.actualizarProtocoloRemote(p)
+                }
 
-            if (exito) {
-                _formState.update { it.copy(guardadoExitoso = true) }
-                onSuccess()
-            } else {
-                onError("Error al guardar el protocolo en base de datos.")
+                if (res.isSuccess) {
+                    _formState.update { it.copy(guardadoExitoso = true) }
+                    onSuccess()
+                } else {
+                    onError(res.exceptionOrNull()?.message ?: "Error al guardar el protocolo.")
+                }
             }
         } else {
             onError("Corrige los campos obligatorios del formulario.")
@@ -189,8 +196,10 @@ class ProtocolosViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun eliminarProtocolo(id: Int, correoUsuario: String, rol: String) {
-        repository.eliminarProtocolo(id)
-        cargarProtocolos(correoUsuario, rol)
+        viewModelScope.launch {
+            repository.eliminarProtocoloRemote(id)
+            cargarProtocolos(correoUsuario, rol)
+        }
     }
 
     fun obtenerProtocoloAnterior(equipo: String, protocoloActualId: Int): Protocolo? {

@@ -3,6 +3,7 @@ package cl.duocuc.induztekspa.viewmodel
 import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import cl.duocuc.induztekspa.model.Usuario
 import cl.duocuc.induztekspa.repository.UsuarioRepository
 import cl.duocuc.induztekspa.ui.state.LoginUiState
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = UsuarioRepository(application)
@@ -41,32 +43,41 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        val usuario = repository.autenticarYObtenerUsuario(correo, password)
-        if (usuario != null) {
-            if (!usuario.estaAprobado) {
-                _loginState.update { 
-                    it.copy(
-                        esPendienteAprobacion = true, 
-                        mensajeErrorGeneral = "Su cuenta está registrada pero PENDIENTE DE APROBACIÓN por el Jefe Técnico."
-                    ) 
+        viewModelScope.launch {
+            val resultado = repository.loginRemote(correo, password)
+            if (resultado.isSuccess) {
+                val usuario = resultado.getOrNull()
+                if (usuario != null) {
+                    if (!usuario.estaAprobado) {
+                        _loginState.update {
+                            it.copy(
+                                esPendienteAprobacion = true,
+                                mensajeErrorGeneral = "Su cuenta está registrada pero PENDIENTE DE APROBACIÓN por el Jefe Técnico."
+                            )
+                        }
+                        return@launch
+                    }
+
+                    sharedPref.edit()
+                        .putString("nombre", usuario.nombre)
+                        .putString("correo", usuario.correo)
+                        .putString("rol", usuario.rol)
+                        .putString("rut", usuario.rut)
+                        .putString("telefono", usuario.telefono)
+                        .putString("cargo", usuario.cargo)
+                        .apply()
+
+                    _loginState.update { it.copy(loginExitoso = true) }
+                    onSuccess()
+                } else {
+                    _loginState.update {
+                        it.copy(mensajeErrorGeneral = "Correo o contraseña incorrectos.")
+                    }
                 }
-                return
-            }
-
-            sharedPref.edit()
-                .putString("nombre", usuario.nombre)
-                .putString("correo", usuario.correo)
-                .putString("rol", usuario.rol)
-                .putString("rut", usuario.rut)
-                .putString("telefono", usuario.telefono)
-                .putString("cargo", usuario.cargo)
-                .apply()
-
-            _loginState.update { it.copy(loginExitoso = true) }
-            onSuccess()
-        } else {
-            _loginState.update { 
-                it.copy(mensajeErrorGeneral = "Correo o contraseña incorrectos. Si no tienes cuenta, por favor regístrate.") 
+            } else {
+                _loginState.update {
+                    it.copy(mensajeErrorGeneral = resultado.exceptionOrNull()?.message ?: "Error al iniciar sesión.")
+                }
             }
         }
     }
@@ -188,12 +199,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 estaAprobado = false
             )
 
-            val id = repository.registrarUsuario(nuevo)
-            if (id > -1) {
-                _registroState.update { it.copy(registroExitoso = true) }
-                onSuccess()
-            } else {
-                onError("El correo electrónico ya está registrado o hubo un error.")
+            viewModelScope.launch {
+                val resultado = repository.registrarUsuarioRemote(nuevo)
+                if (resultado.isSuccess) {
+                    _registroState.update { it.copy(registroExitoso = true) }
+                    onSuccess()
+                } else {
+                    onError(resultado.exceptionOrNull()?.message ?: "El correo electrónico ya está registrado o hubo un error.")
+                }
             }
         } else {
             onError("Por favor corrige los errores del formulario.")

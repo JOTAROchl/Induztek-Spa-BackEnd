@@ -21,3 +21,19 @@ data class NominatimSearchResult(
     @SerializedName("lon") val lon: String?,
     @SerializedName("display_name") val displayName: String?
 )
+
+data class ProtocoloDto(
+    val id: Int = 0,
+    val equipo: String,
+    val fecha: String,
+    val estado: String,
+    val observaciones: String = "",
+    val correoUsuario: String,
+    val temperatura: String = "",
+    val humedad: String = ""
+)
+
+data class RolDto(
+    val id: Int,
+    val nombre: String
+)

@@ -11,7 +11,7 @@ import retrofit2.http.Path
 
 interface UsuarioApi {
     @GET("api/usuarios")
-    suspend fun obtenerUsuarios(): List<Usuario>
+    suspend fun obtenerUsuarios(): Response<List<Usuario>>
 
     @POST("api/usuarios")
     suspend fun registrarUsuario(@Body usuario: Usuario): Response<Usuario>
@@ -23,7 +23,10 @@ interface UsuarioApi {
     suspend fun aprobarUsuario(@Path("id") id: Int): Response<Void>
 
     @PUT("api/usuarios/{id}/rol")
-    suspend fun actualizarRol(@Path("id") id: Int, @Body payload: Map<String, String>): Response<Void>
+    suspend fun actualizarRol(@Path("id") id: Int, @Body payload: Map<String, Any>): Response<Void>
+
+    @PUT("api/usuarios/{id}")
+    suspend fun actualizarUsuario(@Path("id") id: Int, @Body usuario: Usuario): Response<Usuario>
 
     @DELETE("api/usuarios/{id}")
     suspend fun eliminarUsuario(@Path("id") id: Int): Response<Void>
