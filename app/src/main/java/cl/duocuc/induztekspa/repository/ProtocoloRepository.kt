@@ -28,18 +28,19 @@ class ProtocoloRepository(context: Context) {
                 }
                 Result.success(lista)
             } else {
-                Result.success(dbHelper.obtenerProtocolos(correoUsuario, rol))
+                Result.failure(Exception("HTTP ${resp.code()}: ${resp.message()}"))
             }
-        } catch (_: Exception) {
-            Result.success(dbHelper.obtenerProtocolos(correoUsuario, rol))
+        } catch (e: Exception) {
+            Result.failure(Exception("Error de red: ${e.localizedMessage}"))
         }
     }
 
     suspend fun crearProtocoloRemote(protocolo: Protocolo): Result<Boolean> {
+        val fechaLimpia = protocolo.fechaHora.split(" ").firstOrNull() ?: protocolo.fechaHora
         val dto = ProtocoloDto(
-            id = protocolo.id,
+            id = 0,
             equipo = protocolo.equipo,
-            fecha = protocolo.fechaHora,
+            fecha = fechaLimpia,
             estado = protocolo.estado,
             observaciones = protocolo.observaciones,
             correoUsuario = protocolo.correoUsuario,
@@ -48,19 +49,24 @@ class ProtocoloRepository(context: Context) {
         )
         return try {
             val resp = RetrofitClient.protocoloApi.crearProtocolo(dto)
-            dbHelper.insertarProtocolo(protocolo)
-            Result.success(resp.isSuccessful)
-        } catch (_: Exception) {
-            val id = dbHelper.insertarProtocolo(protocolo)
-            if (id > -1) Result.success(true) else Result.failure(Exception("Error al guardar protocolo."))
+            if (resp.isSuccessful) {
+                dbHelper.insertarProtocolo(protocolo)
+                Result.success(true)
+            } else {
+                val errMsj = resp.errorBody()?.string() ?: resp.message()
+                Result.failure(Exception("Servidor HTTP ${resp.code()}: $errMsj"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Error de conexión: ${e.localizedMessage}"))
         }
     }
 
     suspend fun actualizarProtocoloRemote(protocolo: Protocolo): Result<Boolean> {
+        val fechaLimpia = protocolo.fechaHora.split(" ").firstOrNull() ?: protocolo.fechaHora
         val dto = ProtocoloDto(
             id = protocolo.id,
             equipo = protocolo.equipo,
-            fecha = protocolo.fechaHora,
+            fecha = fechaLimpia,
             estado = protocolo.estado,
             observaciones = protocolo.observaciones,
             correoUsuario = protocolo.correoUsuario,
@@ -69,22 +75,28 @@ class ProtocoloRepository(context: Context) {
         )
         return try {
             val resp = RetrofitClient.protocoloApi.actualizarProtocolo(protocolo.id, dto)
-            dbHelper.actualizarProtocolo(protocolo)
-            Result.success(resp.isSuccessful)
-        } catch (_: Exception) {
-            dbHelper.actualizarProtocolo(protocolo)
-            Result.success(true)
+            if (resp.isSuccessful) {
+                dbHelper.actualizarProtocolo(protocolo)
+                Result.success(true)
+            } else {
+                Result.failure(Exception("Servidor HTTP ${resp.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Error de conexión: ${e.localizedMessage}"))
         }
     }
 
     suspend fun eliminarProtocoloRemote(id: Int): Result<Boolean> {
         return try {
             val resp = RetrofitClient.protocoloApi.eliminarProtocolo(id)
-            dbHelper.eliminarProtocolo(id)
-            Result.success(resp.isSuccessful)
-        } catch (_: Exception) {
-            dbHelper.eliminarProtocolo(id)
-            Result.success(true)
+            if (resp.isSuccessful) {
+                dbHelper.eliminarProtocolo(id)
+                Result.success(true)
+            } else {
+                Result.failure(Exception("Servidor HTTP ${resp.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Error de conexión: ${e.localizedMessage}"))
         }
     }
 
